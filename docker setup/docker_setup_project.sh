@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# 🐳 DOCKER SETUP PARA SA MGA EXISTING PROJECTS (Next.js, Laravel, atbp.)
+# DOCKER SETUP PARA SA MGA EXISTING PROJECTS (Next.js, Laravel, atbp.)
 # ==============================================================================
 # Ano ang silbi ng Docker sa project mo?
 #  - Binabalot ng Docker ang buong application mo (code, runtime, dependencies)
 #    sa loob ng isang container.
-#  - "Gumagana sa computer ko, pero hindi sa server?" -> Wala nang ganoong problema!
-#    Dahil parehas ang kapaligiran (environment) sa local man o sa live server.
+#  - Parehas ang kapaligiran (environment) sa local man o sa live server.
 # ==============================================================================
 
 set -e
 
-# Mga Kulay para maganda at madaling basahin sa terminal
+# Mga Kulay para sa terminal
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -34,73 +33,72 @@ explain_nextjs() {
     print_title "PALIWANAG KADA LINYA: NEXT.JS / NODE.JS SETUP"
     cat << 'EOF'
 --------------------------------------------------------------------------------
-📄 A. DOCKERFILE PARA SA NEXT.JS:
+A. DOCKERFILE PARA SA NEXT.JS:
 --------------------------------------------------------------------------------
 FROM node:22-alpine
-# 👉 [PALIWANAG]: Ang base image natin ay lightweight Linux na may Node.js version 22.
-# ✏️ [PAPALITAN MO]: Kung Node 18 o 20 ang gamit mo, palitan ang '22'. Ang 'alpine' ay maliit at mabilis.
+# [PALIWANAG]: Ang base image natin ay lightweight Linux na may Node.js version 22.
+# [PAPALITAN MO]: Kung Node 18 o 20 ang gamit mo, palitan ang '22'.
 
 WORKDIR /app
-# 👉 [PALIWANAG]: Gumagawa ng folder na '/app' sa loob ng container at doon ilalagay ang files.
-# 🔒 [WAG GALAWIN]: Standard ito, hindi kailangang baguhin.
+# [PALIWANAG]: Folder sa loob ng container kung saan ilalagay ang files.
+# [WAG GALAWIN]: Standard path ito.
 
 COPY package*.json ./
-# 👉 [PALIWANAG]: Kinokopya muna ang package.json at package-lock.json bago ang buong code.
-# 🔒 [WAG GALAWIN]: Para sa Docker caching — para mabilis mag-build at hindi paulit-ulit mag-npm install.
+# [PALIWANAG]: Kinokopya muna ang package.json at lockfile para sa caching.
+# [WAG GALAWIN]
 
 RUN npm install
-# 👉 [PALIWANAG]: Ini-install ang lahat ng node_modules sa loob ng container.
-# ✏️ [PAPALITAN MO]: Kung pnpm gamit mo: 'RUN npm install -g pnpm && pnpm install'.
+# [PALIWANAG]: Ini-install ang node_modules sa loob ng container.
+# [PAPALITAN MO]: Kung pnpm gamit mo: RUN npm install -g pnpm && pnpm install
 
 COPY . .
-# 👉 [PALIWANAG]: Kinokopya na ang natitirang source code mo papunta sa /app sa container.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Kinokopya ang natitirang source code papunta sa /app.
+# [WAG GALAWIN]
 
 EXPOSE 3000
-# 👉 [PALIWANAG]: Sinasabi sa Docker na sa port 3000 nakikinig ang application.
-# ✏️ [PAPALITAN MO]: Kung ibang port ang gamit ng Next.js mo, palitan ang 3000.
+# [PALIWANAG]: Port kung saan nakikinig ang Next.js application.
+# [PAPALITAN MO]: Palitan kung may custom port ang Next.js mo.
 
 CMD ["npm", "run", "dev"]
-# 👉 [PALIWANAG]: Ang utos na patatakbuhin pagkabukas ng container para simulan ang development server.
-# ✏️ [PAPALITAN MO]: Sa production: 'CMD ["npm", "run", "start"]'.
+# [PALIWANAG]: Utos para simulan ang development server.
+# [PAPALITAN MO]: Sa production: CMD ["npm", "run", "start"]
 
 --------------------------------------------------------------------------------
-📄 B. COMPOSE.YAML PARA SA NEXT.JS:
+B. COMPOSE.YAML PARA SA NEXT.JS:
 --------------------------------------------------------------------------------
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-# 👉 [PALIWANAG]: Sinasabi kung saang Dockerfile bubuuin ang image (dito sa current directory).
-# 🔒 [WAG GALAWIN]
+    # [PALIWANAG]: Bubuuin ang image gamit ang Dockerfile sa current directory.
+    # [WAG GALAWIN]
 
     container_name: my-project-app
-# ✏️ [PAPALITAN MO]: Palitan ng kahit anong gusto mong pangalan ng container mo (hal. portfolio-app).
+    # [PAPALITAN MO]: Pangalan ng container na gusto mo (hal. portfolio-app).
 
     ports:
       - "3000:3000"
-# 👉 [PALIWANAG]: Format: "HOST_PORT:CONTAINER_PORT".
-# ✏️ [PAPALITAN MO]: Kung may iba nang gumagamit ng port 3000 sa computer mo,
-#                    baguhin ang KALIWA: "3001:3000" (bubuksan sa browser: localhost:3001).
+    # [PALIWANAG]: Format: "HOST_PORT:CONTAINER_PORT".
+    # [PAPALITAN MO]: Kung may conflict sa port 3000, palitan ang KALIWA: "3001:3000".
 
     volumes:
       - .:/app
-# 👉 [PALIWANAG]: BIND MOUNT! Tuwing magse-save ka ng code sa VS Code sa PC mo,
-#                 kusa itong makikita sa loob ng container nang hindi kailangang mag-rebuild!
-# 🔒 [WAG GALAWIN]
+    # [PALIWANAG]: BIND MOUNT: Kapag nag-save ka sa VS Code, kusa itong
+    #              magre-reflect sa container nang walang rebuild.
+    # [WAG GALAWIN]
 
       - /app/node_modules
       - /app/.next
-# 👉 [PALIWANAG]: Iniiwasan na ma-overwrite ang container node_modules ng local node_modules mo.
-# 🔒 [WAG GALAWIN]
+    # [PALIWANAG]: Pinipigilan ang pagka-overwrite ng container modules ng local folder.
+    # [WAG GALAWIN]
 
     environment:
       - NODE_ENV=development
-# 🔒 [WAG GALAWIN]
+    # [WAG GALAWIN]
 
     restart: unless-stopped
-# 👉 [PALIWANAG]: Kapag nag-crash o nag-restart ang Docker, kusa itong bubuhayin ulit.
+    # [PALIWANAG]: Awtomatikong magre-restart kung mag-crash ang container.
 --------------------------------------------------------------------------------
 EOF
 }
@@ -112,46 +110,46 @@ explain_laravel() {
     print_title "PALIWANAG KADA LINYA: LARAVEL / PHP + MYSQL SETUP"
     cat << 'EOF'
 --------------------------------------------------------------------------------
-📄 A. DOCKERFILE PARA SA LARAVEL:
+A. DOCKERFILE PARA SA LARAVEL:
 --------------------------------------------------------------------------------
 FROM php:8.3-cli
-# 👉 [PALIWANAG]: Gumagamit ng PHP 8.3 command-line interface.
-# ✏️ [PAPALITAN MO]: Kung PHP 8.2 ang kailangan ng project mo, palitan ang 8.3.
+# [PALIWANAG]: Gumagamit ng PHP 8.3 CLI version.
+# [PAPALITAN MO]: Kung PHP 8.2 ang kailangan ng project mo, palitan ang 8.3.
 
 WORKDIR /var/www/html
-# 👉 [PALIWANAG]: Ang default folder sa Linux kung saan inilalagay ang web apps.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Default web directory sa Linux.
+# [WAG GALAWIN]
 
 RUN apt-get update && apt-get install -y \
     git \
     unzip \
     libzip-dev \
     && docker-php-ext-install zip pdo_mysql
-# 👉 [PALIWANAG]: Nag-i-install ng Linux packages at PHP extensions (lalo na ang pdo_mysql para sa database).
-# ✏️ [PAPALITAN MO]: Kung kailangan mo ng gd (image processing) o redis, idagdag dito.
+# [PALIWANAG]: Ini-install ang system dependencies at pdo_mysql para sa database.
+# [PAPALITAN MO]: Idagdag dito ang iba pang extensions kung kailangan (hal. gd, redis).
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-# 👉 [PALIWANAG]: Kinukuha ang official Composer 2 binary para magamit sa container.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Kinukuha ang official Composer 2 binary para magamit sa container.
+# [WAG GALAWIN]
 
 COPY . .
-# 👉 [PALIWANAG]: Kinokopya ang buong Laravel source code mo sa container.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Kinokopya ang buong Laravel source code mo sa container.
+# [WAG GALAWIN]
 
 RUN composer install
-# 👉 [PALIWANAG]: Ini-install ang mga PHP vendor packages.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Ini-install ang mga PHP vendor packages.
+# [WAG GALAWIN]
 
 EXPOSE 8000
-# 👉 [PALIWANAG]: Ang port ng Laravel artisan serve.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Port ng Laravel artisan serve.
+# [WAG GALAWIN]
 
 CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
-# 👉 [PALIWANAG]: Pinapatakbo ang Laravel built-in development server.
-# 🔒 [WAG GALAWIN]: Ang '--host=0.0.0.0' ay kailangan para ma-access mula sa labas ng container!
+# [PALIWANAG]: Kailangan ang '--host=0.0.0.0' para ma-access mula sa host machine.
+# [WAG GALAWIN]
 
 --------------------------------------------------------------------------------
-📄 B. COMPOSE.YAML PARA SA LARAVEL + MYSQL:
+B. COMPOSE.YAML PARA SA LARAVEL + MYSQL:
 --------------------------------------------------------------------------------
 services:
   app:
@@ -161,43 +159,41 @@ services:
     container_name: laravel-app
     ports:
       - "8000:8000"
-# ✏️ [PAPALITAN MO]: Kung may conflict sa 8000, palitan ang kaliwa (hal. "8080:8000").
+    # [PAPALITAN MO]: Kung may conflict sa 8000, palitan ang kaliwa (hal. "8080:8000").
     volumes:
       - .:/var/www/html
-# 👉 [PALIWANAG]: Bind mount para makita agad ang bago mong code nang walang rebuild.
+    # [PALIWANAG]: Bind mount para sa live reload ng code changes.
     depends_on:
       - db
-# 👉 [PALIWANAG]: Sinasabi na unahing buksan ang database bago ang Laravel app.
+    # [PALIWANAG]: Hihintaying magsimula muna ang database bago ang Laravel app.
 
   db:
     image: mysql:8.0
-# 👉 [PALIWANAG]: MySQL version 8.0 official image mula sa Docker Hub.
     container_name: laravel-db
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: laravel_db
-# ✏️ [PAPALITAN MO]: Pangalan ng database na gusto mo.
+      # [PAPALITAN MO]: Pangalan ng database.
       MYSQL_ROOT_PASSWORD: root
-# ✏️ [PAPALITAN MO]: Root password ng MySQL.
+      # [PAPALITAN MO]: Password ng root admin.
       MYSQL_USER: laravel
-# ✏️ [PAPALITAN MO]: Username ng regular user.
+      # [PAPALITAN MO]: Username ng regular user.
       MYSQL_PASSWORD: secret
-# ✏️ [PAPALITAN MO]: Password ng regular user.
+      # [PAPALITAN MO]: Password ng regular user.
     ports:
       - "3307:3306"
-# 👉 [PALIWANAG]: Ginamit ang 3307 sa computer mo para hindi bumangga kung may naka-install 
-#                 ka nang local MySQL sa port 3306!
+    # [PALIWANAG]: Ginamit ang 3307 sa host para hindi bumangga sa local MySQL sa port 3306.
     volumes:
       - mysql_data:/var/lib/mysql
-# 👉 [PALIWANAG]: Dito ise-save ang data ng database para kahit i-down ang container, HINDI mabubura ang data mo!
+    # [PALIWANAG]: Persistent storage para hindi mabura ang data kahit tanggalin ang container.
 
 volumes:
   mysql_data:
 --------------------------------------------------------------------------------
-💡 PAALALA SA LARAVEL .ENV:
+PAALALA SA LARAVEL .ENV:
    Sa loob ng iyong .env file, palitan ang database settings ng ganito:
      DB_CONNECTION=mysql
-     DB_HOST=db             <-- 'db' ang ilalagay (pangalan ng service), HINDI localhost!
+     DB_HOST=db             # 'db' ang ilalagay (service name), HINDI localhost
      DB_PORT=3306
      DB_DATABASE=laravel_db
      DB_USERNAME=laravel
@@ -249,7 +245,6 @@ setup_nextjs() {
         fi
     fi
 
-    # Dockerfile
     cat << 'EOF' > Dockerfile
 FROM node:22-alpine
 
@@ -267,7 +262,6 @@ CMD ["npm", "run", "dev"]
 EOF
     print_success "Nagawa na ang: Dockerfile (Node.js 22 Alpine)"
 
-    # compose.yaml
     cat << 'EOF' > compose.yaml
 services:
   app:
@@ -287,7 +281,6 @@ services:
 EOF
     print_success "Nagawa na ang: compose.yaml"
 
-    # .dockerignore
     cat << 'EOF' > .dockerignore
 node_modules
 .next
@@ -318,7 +311,6 @@ setup_laravel() {
         fi
     fi
 
-    # Dockerfile
     cat << 'EOF' > Dockerfile
 FROM php:8.3-cli
 
@@ -342,7 +334,6 @@ CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
 EOF
     print_success "Nagawa na ang: Dockerfile (PHP 8.3 CLI + Composer)"
 
-    # compose.yaml
     cat << 'EOF' > compose.yaml
 services:
   app:
@@ -376,7 +367,6 @@ volumes:
 EOF
     print_success "Nagawa na ang: compose.yaml"
 
-    # .dockerignore
     cat << 'EOF' > .dockerignore
 .git
 .env

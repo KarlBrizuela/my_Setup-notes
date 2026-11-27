@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# 🪟 GABAY SA PAG-INSTALL NG DOCKER AT WSL2 SA WINDOWS 10 / 11
+# GABAY SA PAG-INSTALL NG DOCKER AT WSL2 SA WINDOWS 10 / 11
 # ==============================================================================
 # Bakit kailangan ng WSL2 para sa Docker sa Windows?
-#  - Ang Docker ay katutubong (native) tumatakbo sa Linux kernel.
+#  - Ang Docker ay katutubong tumatakbo sa Linux kernel.
 #  - Gamit ang WSL2 (Windows Subsystem for Linux 2), nagpapatakbo ang Windows
-#    ng tunay na Linux kernel sa background nang napakabilis at magaan.
-#  - Dito kumukuha ng lakas ang Docker Desktop para maging mabilis ang 
-#    containers mo sa Windows!
+#    ng tunay na Linux kernel sa background.
+#  - Dito kumukuha ng bilis ang Docker Desktop sa Windows.
 # ==============================================================================
 
 set -e
 
-# Mga Kulay
+# Mga Kulay para sa terminal
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -45,7 +44,7 @@ check_windows() {
     print_info "MGA KINAKAILANGAN (REQUIREMENTS):"
     echo "  1. Windows 11 (64-bit) o Windows 10 (64-bit, Version 21H2 pataas)"
     echo "  2. Hardware Virtualization Enabled sa BIOS/UEFI:"
-    echo "     - Paano malalaman? Buksan ang Task Manager (Ctrl + Shift + Esc)"
+    echo "     - Buksan ang Task Manager (Ctrl + Shift + Esc)"
     echo "     - Pumunta sa tab na 'Performance' -> 'CPU'"
     echo "     - Tingnan sa bandang ibaba kung 'Virtualization: Enabled'"
     echo "     - Kung 'Disabled', kailangan itong i-enable sa BIOS (Intel VT-x o AMD-V)."
@@ -78,13 +77,13 @@ setup_wsl2() {
     if [[ "$update_confirm" =~ ^[Yy]$ ]]; then
         print_info "Ina-update ang WSL..."
         wsl.exe --update || wsl --update
-        print_success "Na-update na ang WSL!"
+        print_success "Na-update na ang WSL."
     fi
 
     echo ""
     print_info "Siniset ang default version ng WSL sa Bersyon 2..."
     wsl.exe --set-default-version 2 || wsl --set-default-version 2
-    print_success "WSL2 na ang default!"
+    print_success "WSL2 na ang default version."
 }
 
 # ------------------------------------------------------------------------------
@@ -112,7 +111,7 @@ install_docker() {
             if command -v winget.exe &> /dev/null || command -v winget &> /dev/null; then
                 print_info "Pinapatakbo ang: winget install Docker.DockerDesktop..."
                 winget.exe install -e --id Docker.DockerDesktop || winget install -e --id Docker.DockerDesktop
-                print_success "Tapos na ang pag-install! I-restart ang PC kung hiningi."
+                print_success "Tapos na ang pag-install. I-restart ang PC kung kinakailangan."
             else
                 print_error "Walang winget. Bubuksan ang download website..."
                 powershell.exe -Command "Start-Process 'https://www.docker.com/products/docker-desktop/'"
@@ -136,12 +135,12 @@ explain_settings() {
     cat << 'EOF'
 Pagkatapos ma-install ang Docker Desktop, buksan ito at gawin ang sumusunod:
 
-1. I-click ang GEAR ICON ⚙️ (Settings) sa bandang taas sa kanan.
+1. I-click ang Settings (Gear Icon) sa bandang kanang itaas.
 2. Sa kaliwang menu, pumunta sa: "General"
-   - Siguraduhing may tsek: [x] "Use the WSL 2 based engine"
+   - Siguraduhing may check: [x] "Use the WSL 2 based engine"
 3. Pumunta sa: "Resources" -> "WSL Integration"
-   - Siguraduhing may tsek: [x] "Enable integration with my default WSL distro"
-   - Kung may naka-install kang Ubuntu distro, i-ON ang toggle switch sa tabi nito!
+   - Siguraduhing may check: [x] "Enable integration with my default WSL distro"
+   - Kung may naka-install kang Ubuntu distro, i-ON ang toggle switch sa tabi nito.
 4. I-click ang button sa ibaba: "Apply & restart"
 EOF
 }
@@ -168,9 +167,9 @@ verify_docker() {
         return 1
     fi
 
-    print_info "Sinusuri ang koneksyon sa Docker Daemon (Bukas ba ang app?):"
+    print_info "Sinusuri ang koneksyon sa Docker Daemon:"
     if docker info &> /dev/null; then
-        print_success "Bukas at maayos na tumatakbo ang Docker Desktop!"
+        print_success "Bukas at maayos na tumatakbo ang Docker Desktop."
     else
         print_warn "Hindi maka-connect sa Docker. Buksan muna ang Docker Desktop app."
         return 1
@@ -183,7 +182,7 @@ test_docker() {
     print_info "Pinapatakbo ang: docker run hello-world..."
     if docker run --rm hello-world; then
         echo ""
-        print_success "CONGRATULATIONS! Maayos na gumagana ang Docker sa iyong Windows PC! 🎉"
+        print_success "Maayos na gumagana ang Docker sa iyong Windows PC."
     else
         echo ""
         print_error "May problema sa pagpapatakbo. Siguraduhing bukas ang Docker Desktop at naka-enable ang WSL2."

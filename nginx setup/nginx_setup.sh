@@ -1,26 +1,25 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# 🌐 GABAY AT SETUP SCRIPT PARA SA NGINX (Reverse Proxy + SSL Certbot)
+# GABAY AT SETUP SCRIPT PARA SA NGINX (Reverse Proxy + SSL Certbot)
 # ==============================================================================
 # Ano ang Nginx at bakit natin ito kailangan?
-#  - Sa production, HINDI natin basta binubuksan ang internal port ng Docker
+#  - Sa production, hindi binubuksan ang internal port ng Docker
 #    (tulad ng 3000 o 8000) sa buong internet.
-#  - Si Nginx ang nagsisilbing "Guard / Traffic Enforcer" (Reverse Proxy).
+#  - Si Nginx ang nagsisilbing Reverse Proxy.
 #  - Lahat ng bisita sa internet dadaan sa port 80 (HTTP) o port 443 (HTTPS).
 #  - Si Nginx ang magpapasa ng request papasok sa Docker container mo
 #    (proxy_pass http://127.0.0.1:3000).
 #
 # Bakit kailangan ng Nginx?
-#  1. Libreng SSL / Padlock 🔒 gamit ang Let's Encrypt (Certbot).
+#  1. Libreng SSL Certificate gamit ang Let's Encrypt (Certbot).
 #  2. Custom Domain (hal. myproject.com sa halip na http://123.45.67.89:3000).
-#  3. Maraming Apps sa iisang Server (hal. app.domain.com -> Port 3000, 
-#     api.domain.com -> Port 8000).
+#  3. Maraming Apps sa iisang Server (hal. app.domain.com at api.domain.com).
 # ==============================================================================
 
 set -e
 
-# Mga Kulay
+# Mga Kulay para sa terminal
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -40,19 +39,19 @@ print_warn()    { echo -e "${YELLOW}[PAALALA]${NC} $1"; }
 show_overview() {
     print_title "PAANO GUMAGANA ANG NGINX REVERSE PROXY"
     cat << 'EOF'
-[User sa Internet (Browser)]
+[User sa Browser]
        │
-       │ Nag-type ng: https://myproject.com
+       │ Request: https://myproject.com
        ▼
-[Nginx sa Port 80 / 443 (May SSL / HTTPS)]
+[Nginx sa Port 80 / 443 (May SSL)]
        │
-       │ Sinasala at pinapasa ang request (proxy_pass)
+       │ Pinapasa ang request (proxy_pass)
        ▼
 [Docker Container sa loob ng Server (Port 3000 o 8000)]
        │
        │ Pinoproseso ang Next.js o Laravel code
        ▼
-[Ibabalik ang tugon papunta sa User sa Browser] 🎉
+[Ibabalik ang tugon pabalik sa User]
 EOF
 }
 
@@ -62,64 +61,61 @@ EOF
 show_config_explanation() {
     print_title "PALIWANAG KADA LINYA SA NGINX CONFIG (/etc/nginx/sites-available/myapp.conf)"
     cat << 'EOF'
-Ito ang karaniwang Nginx configuration file para sa isang Dockerized project.
-Tingnan maigi ang mga marka kung alin ang papalitan mo:
+Ito ang Nginx configuration file para sa isang Dockerized project:
 
 --------------------------------------------------------------------------------
 server {
-# 👉 [PALIWANAG]: Simula ng server block para sa isang website/domain.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Simula ng server block para sa isang website/domain.
+# [WAG GALAWIN]
 
     listen 80;
     listen [::]:80;
-# 👉 [PALIWANAG]: Nakikinig sa port 80 (ang default port ng HTTP sa internet).
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Nakikinig sa port 80 (ang default port ng HTTP sa internet).
+# [WAG GALAWIN]
 
     server_name myproject.com www.myproject.com;
-# ✏️ [PAPALITAN MO]: Ilagay dito ang tunay mong domain o subdomain na binili mo.
-#                    Kung wala pang domain at IP lang, ilagay ang IP ng VPS (hal. 123.45.67.89;).
-# 👉 [PALIWANAG]: Sinasabi kay Nginx na kapag may nag-request para sa domain na ito, dito pupunta.
+# [PAPALITAN MO]: Ilagay dito ang tunay mong domain o subdomain na binili mo.
+#                 Kung wala pang domain, ilagay ang IP ng VPS (hal. 123.45.67.89;).
+# [PALIWANAG]: Sinasabi kay Nginx na kapag may nag-request para sa domain na ito, dito pupunta.
 
     client_max_body_size 50M;
-# ✏️ [PAPALITAN MO]: Maximum file size na pwedeng i-upload ng users sa website mo (hal. 10M, 50M, 100M).
-# 👉 [PALIWANAG]: Kung mag-a-upload ka ng images o videos, hindi ito iba-block ni Nginx.
+# [PAPALITAN MO]: Maximum file size na pwedeng i-upload ng users sa website mo.
+# [PALIWANAG]: Kung mag-a-upload ka ng images o files, hindi ito iba-block ni Nginx.
 
     location / {
-# 👉 [PALIWANAG]: Sinasakop ang lahat ng URL path (lahat ng requests na papasok).
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Sinasakop ang lahat ng URL requests na papasok.
+# [WAG GALAWIN]
 
         proxy_pass http://127.0.0.1:3000;
-# ✏️ [PAPALITAN MO]: ANG PINAKAMAHALAGANG LINYA!
-#                    - Palitan ang '3000' ng port kung saan tumatakbo ang Docker container mo.
-#                    - Kung Next.js: karaniwan ay 3000.
-#                    - Kung Laravel: karaniwan ay 8000.
-# 👉 [PALIWANAG]: Ipinapasa ni Nginx ang request papunta sa local Docker port mo.
+# [PAPALITAN MO]: Palitan ang '3000' ng port kung saan tumatakbo ang Docker container mo.
+#                 - Next.js: karaniwan ay 3000.
+#                 - Laravel: karaniwan ay 8000.
+# [PALIWANAG]: Ipinapasa ni Nginx ang request papunta sa local Docker port mo.
 
         proxy_http_version 1.1;
-# 👉 [PALIWANAG]: Gumagamit ng HTTP/1.1 protocol para sa mabilis na koneksyon at WebSockets.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Gumagamit ng HTTP/1.1 protocol para sa mabilis na koneksyon at WebSockets.
+# [WAG GALAWIN]
 
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
-# 👉 [PALIWANAG]: Para sa Next.js HMR (Hot Module Replacement) at WebSockets / Live chats.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Para sa live reload at WebSockets support.
+# [WAG GALAWIN]
 
         proxy_set_header Host $host;
-# 👉 [PALIWANAG]: Ipinapasa ang orihinal na domain name papasok sa container mo.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Ipinapasa ang orihinal na domain name papasok sa container mo.
+# [WAG GALAWIN]
 
         proxy_set_header X-Real-IP $remote_addr;
-# 👉 [PALIWANAG]: Ipinapasa ang totoong IP address ng bumibisita (kung hindi ito ilalagay, 
-#                    aakalain ng app mo na 127.0.0.1 ang IP ng lahat ng user!).
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Ipinapasa ang totoong IP address ng bumibisita.
+# [WAG GALAWIN]
 
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-# 👉 [PALIWANAG]: Sinasabi sa app kung HTTP o HTTPS ang ginamit ng user.
-# 🔒 [WAG GALAWIN]
+# [PALIWANAG]: Sinasabi sa app kung HTTP o HTTPS ang ginamit ng user.
+# [WAG GALAWIN]
 
         proxy_cache_bypass $http_upgrade;
-# 🔒 [WAG GALAWIN]
+# [WAG GALAWIN]
     }
 }
 --------------------------------------------------------------------------------
@@ -146,7 +142,7 @@ HAKBANG 2: Siguraduhing tumatakbo ang Nginx
 HAKBANG 3: Gumawa ng Configuration File para sa Project mo
   sudo nano /etc/nginx/sites-available/myproject.conf
 
-  (I-paste ang template sa taas, palitan ang server_name at proxy_pass port, tapos i-save: Ctrl+O, Enter, Ctrl+X)
+  (I-paste ang template, palitan ang server_name at proxy_pass port, tapos i-save: Ctrl+O, Enter, Ctrl+X)
 
 HAKBANG 4: I-activate ang configuration (Gumawa ng symlink)
   sudo ln -s /etc/nginx/sites-available/myproject.conf /etc/nginx/sites-enabled/
@@ -164,9 +160,9 @@ EOF
 # 4. GABAY: LIBRENG SSL / HTTPS GAMIT ANG CERTBOT
 # ------------------------------------------------------------------------------
 show_ssl_guide() {
-    print_title "PAANO LAGYAN NG LIBRENG SSL / HTTPS (PADLOCK 🔒) GAMIT ANG CERTBOT"
+    print_title "PAANO LAGYAN NG LIBRENG SSL / HTTPS GAMIT ANG CERTBOT"
     cat << 'EOF'
-Kapag may sarili ka nang domain name na nakaturo sa IP ng VPS mo (A Record sa DNS):
+Kapag may sarili ka nang domain name na nakaturo sa IP ng VPS mo:
 
 HAKBANG 1: I-install ang Certbot at Nginx plugin
   sudo apt update
@@ -175,19 +171,18 @@ HAKBANG 1: I-install ang Certbot at Nginx plugin
 HAKBANG 2: Humingi ng SSL Certificate para sa iyong domain
   sudo certbot --nginx -d myproject.com -d www.myproject.com
 
-  (May itatanong sa iyo ang Certbot):
-  1. Email Address: Ilagay ang email mo (para sa security notices).
+  Mga tanong ng Certbot:
+  1. Email Address: Ilagay ang email mo.
   2. Terms of Service: Type 'Y' at Enter.
-  3. Share email?: Pwedeng 'N'.
-  4. Automatic Redirect HTTP to HTTPS?: Piliin ang '2' (Redirect - Recommended).
+  3. Share email: Pwedeng 'N'.
+  4. Automatic Redirect HTTP to HTTPS: Piliin ang '2' (Redirect - Recommended).
 
-HAKBANG 3: Kusa nang babaguhin ng Certbot ang iyong Nginx config!
-  - Magiging HTTPS na ang site mo: https://myproject.com
-  - May padlock 🔒 na agad sa browser!
+HAKBANG 3: Kusa nang ia-update ng Certbot ang iyong Nginx config.
+  Magiging HTTPS na ang site mo: https://myproject.com
 
 PAALALA SA SSL RENEWAL:
-  Libre ang Let's Encrypt certificate sa loob ng 90 days, pero KUSA itong 
-  ina-auto-renew ng Certbot bago mag-expire!
+  Libre ang Let's Encrypt certificate sa loob ng 90 days, pero kusa itong
+  ina-auto-renew ng Certbot bago mag-expire.
   Para masubukan kung gagana ang auto-renew:
     sudo certbot renew --dry-run
 EOF
@@ -205,7 +200,7 @@ generate_nginx_config() {
         domain_name="localhost"
     fi
 
-    read -rp "Anong local port ng Docker container mo? (hal. 3000 para sa Next.js, 8000 para sa Laravel) [Default: 3000]: " app_port
+    read -rp "Anong local port ng Docker container mo? [Default: 3000]: " app_port
     app_port=${app_port:-3000}
 
     read -rp "Max upload file size? [Default: 50M]: " max_size
@@ -218,17 +213,13 @@ server {
     listen 80;
     listen [::]:80;
 
-    # Ang iyong domain name
     server_name ${domain_name} www.${domain_name};
 
-    # Maximum upload size
     client_max_body_size ${max_size};
 
     location / {
-        # Port ng iyong Docker container
         proxy_pass http://127.0.0.1:${app_port};
 
-        # Standard proxy headers para sa seguridad at WebSockets
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -238,7 +229,6 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
 
-        # Timeout settings para hindi mag-time out ang mabibigat na requests
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
@@ -285,7 +275,7 @@ show_menu() {
     echo " 1) Ano ang Nginx at Paano gumagana ang Reverse Proxy?"
     echo " 2) Paliwanag Kada Linya sa Nginx Config (Alin ang papalitan)"
     echo " 3) Step-by-Step Setup Guide sa Ubuntu / Debian VPS"
-    echo " 4) Gabay sa Libreng SSL / HTTPS (Padlock 🔒) gamit ang Certbot"
+    echo " 4) Gabay sa Libreng SSL / HTTPS gamit ang Certbot"
     echo "------------------------------------------------------"
     echo " 5) Kusang gumawa ng Nginx .conf file para sa project mo"
     echo " 6) I-check ang Nginx status (para sa VPS/Linux)"
