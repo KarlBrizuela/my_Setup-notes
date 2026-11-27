@@ -1,49 +1,40 @@
 #!/usr/bin/env bash
 
 # ==============================================================================
-# Docker Desktop & WSL2 Installation & Setup Guide for Windows
+# 🪟 GABAY SA PAG-INSTALL NG DOCKER AT WSL2 SA WINDOWS 10 / 11
 # ==============================================================================
-# Description: Automates and guides the installation, configuration, and
-#              verification of WSL2 and Docker Desktop on Windows.
+# Bakit kailangan ng WSL2 para sa Docker sa Windows?
+#  - Ang Docker ay katutubong (native) tumatakbo sa Linux kernel.
+#  - Gamit ang WSL2 (Windows Subsystem for Linux 2), nagpapatakbo ang Windows
+#    ng tunay na Linux kernel sa background nang napakabilis at magaan.
+#  - Dito kumukuha ng lakas ang Docker Desktop para maging mabilis ang 
+#    containers mo sa Windows!
 # ==============================================================================
 
 set -e
 
-# Color definitions
+# Mga Kulay
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 BOLD='\033[1m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Helper functions
+print_title()   { echo -e "\n${BOLD}${BLUE}=== $1 ===${NC}\n"; }
 print_info()    { echo -e "${CYAN}[INFO]${NC} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-print_warn()    { echo -e "${YELLOW}[WARNING]${NC} $1"; }
+print_warn()    { echo -e "${YELLOW}[PAALALA]${NC} $1"; }
 print_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
-print_step()    { echo -e "\n${BOLD}${BLUE}=== $1 ===${NC}\n"; }
-
-# Detect execution helper for Windows commands in Bash (Git Bash / WSL / MSYS)
-run_win_cmd() {
-    local cmd="$1"
-    if command -v powershell.exe &> /dev/null; then
-        powershell.exe -NoProfile -Command "$cmd"
-    elif command -v cmd.exe &> /dev/null; then
-        cmd.exe /c "$cmd"
-    else
-        eval "$cmd"
-    fi
-}
 
 # ------------------------------------------------------------------------------
-# 1. System Requirements Check
+# 1. HAKBANG 1: CHECK WINDOWS VERSION & HARDWARE VIRTUALIZATION
 # ------------------------------------------------------------------------------
-check_windows_version() {
-    print_step "Step 1: Check Windows Version & Virtualization"
+check_windows() {
+    print_title "HAKBANG 1: CHECK ANG WINDOWS VERSION AT HARDWARE VIRTUALIZATION"
 
-    print_info "Checking Windows Version..."
+    print_info "Kasalukuyang Bersyon ng Windows:"
     if command -v cmd.exe &> /dev/null; then
         cmd.exe /c ver
     elif command -v powershell.exe &> /dev/null; then
@@ -51,234 +42,227 @@ check_windows_version() {
     fi
 
     echo ""
-    print_info "Minimum Requirements:"
-    echo "  - Windows 11 64-bit: Home, Pro, Enterprise, or Education (Build 22000+)"
-    echo "  - Windows 10 64-bit: Home, Pro (Version 21H2 / Build 19044 or higher)"
-    echo "  - Hardware Virtualization enabled in BIOS/UEFI"
-    echo "  - Minimum 4 GB RAM"
+    print_info "MGA KINAKAILANGAN (REQUIREMENTS):"
+    echo "  1. Windows 11 (64-bit) o Windows 10 (64-bit, Version 21H2 pataas)"
+    echo "  2. Hardware Virtualization Enabled sa BIOS/UEFI:"
+    echo "     - Paano malalaman? Buksan ang Task Manager (Ctrl + Shift + Esc)"
+    echo "     - Pumunta sa tab na 'Performance' -> 'CPU'"
+    echo "     - Tingnan sa bandang ibaba kung 'Virtualization: Enabled'"
+    echo "     - Kung 'Disabled', kailangan itong i-enable sa BIOS (Intel VT-x o AMD-V)."
     echo ""
 }
 
 # ------------------------------------------------------------------------------
-# 2. WSL2 Setup & Configuration
+# 2. HAKBANG 2 & 3: PAG-SETUP AT PAG-UPDATE NG WSL2
 # ------------------------------------------------------------------------------
 setup_wsl2() {
-    print_step "Step 2 & 3: Check and Configure WSL2"
+    print_title "HAKBANG 2 & 3: PAG-SETUP AT PAG-UPDATE NG WSL2"
 
     if ! command -v wsl.exe &> /dev/null && ! command -v wsl &> /dev/null; then
-        print_warn "wsl command not found. Installing WSL requires Administrator PowerShell:"
-        echo "  Run in Admin PowerShell: wsl --install"
+        print_error "Hindi mahanap ang 'wsl' command."
+        print_info "Buksan ang PowerShell bilang Administrator at patakbuhin:"
+        echo "  wsl --install"
+        echo "(I-restart ang computer pagkatapos)."
         return 1
     fi
 
-    print_info "Current WSL Status:"
-    wsl.exe --status 2>/dev/null || wsl --status 2>/dev/null || print_warn "Could not query wsl --status"
+    print_info "Kasalukuyang Status ng WSL:"
+    wsl.exe --status 2>/dev/null || wsl --status 2>/dev/null || print_warn "Hindi ma-query ang status."
 
     echo ""
-    print_info "Installed Linux Distributions:"
-    wsl.exe --list --verbose 2>/dev/null || wsl --list --verbose 2>/dev/null || print_warn "No distributions installed yet."
+    print_info "Naka-install na mga Linux Distribution:"
+    wsl.exe --list --verbose 2>/dev/null || wsl --list --verbose 2>/dev/null || print_info "Wala pang distribution."
 
     echo ""
-    read -rp "Do you want to update WSL to the latest version? (y/N): " update_confirm
+    read -rp "Gusto mo bang i-update ang WSL sa pinakabagong bersyon? (y/N): " update_confirm
     if [[ "$update_confirm" =~ ^[Yy]$ ]]; then
-        print_info "Updating WSL..."
+        print_info "Ina-update ang WSL..."
         wsl.exe --update || wsl --update
-        print_success "WSL updated successfully."
+        print_success "Na-update na ang WSL!"
     fi
 
     echo ""
-    print_info "Setting WSL default version to 2..."
+    print_info "Siniset ang default version ng WSL sa Bersyon 2..."
     wsl.exe --set-default-version 2 || wsl --set-default-version 2
-    print_success "WSL default version set to 2."
+    print_success "WSL2 na ang default!"
 }
 
 # ------------------------------------------------------------------------------
-# 3. Docker Desktop Installation
+# 3. HAKBANG 4: PAG-INSTALL NG DOCKER DESKTOP
 # ------------------------------------------------------------------------------
-install_docker_desktop() {
-    print_step "Step 4: Install Docker Desktop"
+install_docker() {
+    print_title "HAKBANG 4: PAG-INSTALL NG DOCKER DESKTOP"
 
     if command -v docker &> /dev/null; then
-        print_warn "Docker is already detected on this system ($(docker --version))."
-        read -rp "Do you still want to re-run installation? (y/N): " reinstall
+        print_warn "May Docker na sa computer mo ($(docker --version))."
+        read -rp "Gusto mo pa bang ituloy ang installer? (y/N): " reinstall
         if [[ ! "$reinstall" =~ ^[Yy]$ ]]; then
             return 0
         fi
     fi
 
-    echo "Select an installation method:"
-    echo "  1) Install automatically via Windows Package Manager (winget)"
-    echo "  2) Open official Docker Desktop download URL in browser"
-    echo "  0) Skip"
-    read -rp "Choice [1/2/0]: " install_choice
+    echo "Pumili ng paraan ng pag-install:"
+    echo "  1) Awtomatikong i-install gamit ang winget (Windows Package Manager)"
+    echo "  2) Buksan ang opisyal na download website sa browser"
+    echo "  0) Lumaktaw (Skip)"
+    read -rp "Piliin [1/2/0]: " method
 
-    case "$install_choice" in
+    case "$method" in
         1)
             if command -v winget.exe &> /dev/null || command -v winget &> /dev/null; then
-                print_info "Running winget install Docker.DockerDesktop..."
+                print_info "Pinapatakbo ang: winget install Docker.DockerDesktop..."
                 winget.exe install -e --id Docker.DockerDesktop || winget install -e --id Docker.DockerDesktop
-                print_success "Winget installation finished. Restart your computer if prompted."
+                print_success "Tapos na ang pag-install! I-restart ang PC kung hiningi."
             else
-                print_error "winget is not available on this system."
-                print_info "Opening official download page instead..."
-                run_win_cmd "Start-Process 'https://www.docker.com/products/docker-desktop/'"
+                print_error "Walang winget. Bubuksan ang download website..."
+                powershell.exe -Command "Start-Process 'https://www.docker.com/products/docker-desktop/'"
             fi
             ;;
         2)
-            print_info "Opening official download URL in your browser..."
-            run_win_cmd "Start-Process 'https://www.docker.com/products/docker-desktop/'"
-            echo "  URL: https://www.docker.com/products/docker-desktop/"
+            print_info "Binubuksan ang Docker Desktop download page..."
+            powershell.exe -Command "Start-Process 'https://www.docker.com/products/docker-desktop/'"
             ;;
         *)
-            print_info "Skipping installation step."
+            print_info "Nilaktawan ang pag-install."
             ;;
     esac
 }
 
 # ------------------------------------------------------------------------------
-# 4. Docker Desktop Configuration Guide
+# 4. HAKBANG 5: GABAY SA SETTINGS NG DOCKER DESKTOP
 # ------------------------------------------------------------------------------
-show_docker_config_guide() {
-    print_step "Step 5: Docker Desktop Configuration"
+explain_settings() {
+    print_title "HAKBANG 5: MGA DAPAT I-SET SA LOOB NG DOCKER DESKTOP APP"
+    cat << 'EOF'
+Pagkatapos ma-install ang Docker Desktop, buksan ito at gawin ang sumusunod:
 
-    echo -e "${YELLOW}Please perform the following inside Docker Desktop Settings:${NC}"
-    echo ""
-    echo "1. Launch Docker Desktop from the Start Menu."
-    echo "2. Open Settings (gear icon in the top right)."
-    echo "3. Go to 'General':"
-    echo "   [x] Enable 'Use the WSL 2 based engine'"
-    echo "4. Go to 'Resources' -> 'WSL Integration':"
-    echo "   [x] Enable integration with default WSL distro"
-    echo "   [x] Turn on the toggle for your installed Linux distro (e.g., Ubuntu)"
-    echo "5. Click 'Apply & restart'."
-    echo ""
+1. I-click ang GEAR ICON ⚙️ (Settings) sa bandang taas sa kanan.
+2. Sa kaliwang menu, pumunta sa: "General"
+   - Siguraduhing may tsek: [x] "Use the WSL 2 based engine"
+3. Pumunta sa: "Resources" -> "WSL Integration"
+   - Siguraduhing may tsek: [x] "Enable integration with my default WSL distro"
+   - Kung may naka-install kang Ubuntu distro, i-ON ang toggle switch sa tabi nito!
+4. I-click ang button sa ibaba: "Apply & restart"
+EOF
 }
 
 # ------------------------------------------------------------------------------
-# 5. Verification & Test
+# 5. HAKBANG 6 & 7: PAG-VERIFY AT TESTING
 # ------------------------------------------------------------------------------
-verify_installation() {
-    print_step "Step 6: Verify Docker Installation"
+verify_docker() {
+    print_title "HAKBANG 6: PAG-VERIFY SA INSTALLATION"
 
-    local ok=true
-
-    print_info "Checking Docker CLI:"
+    print_info "Sinusuri ang Docker CLI:"
     if command -v docker &> /dev/null; then
-        echo "  - $(docker --version)"
+        echo "  - Bersyon: $(docker --version)"
     else
-        print_error "docker command not found. Make sure Docker Desktop is installed and in PATH."
-        ok=false
+        print_error "Hindi mahanap ang docker. Siguraduhing tapos na ang install."
+        return 1
     fi
 
-    print_info "Checking Docker Compose:"
+    print_info "Sinusuri ang Docker Compose:"
     if docker compose version &> /dev/null; then
-        echo "  - $(docker compose version)"
+        echo "  - Bersyon: $(docker compose version)"
     else
-        print_error "docker compose command not found."
-        ok=false
+        print_error "Hindi mahanap ang docker compose."
+        return 1
     fi
 
-    print_info "Checking Docker Daemon connection:"
+    print_info "Sinusuri ang koneksyon sa Docker Daemon (Bukas ba ang app?):"
     if docker info &> /dev/null; then
-        print_success "Docker daemon is active and responding."
+        print_success "Bukas at maayos na tumatakbo ang Docker Desktop!"
     else
-        print_warn "Docker daemon is not running or not responding."
-        print_info "Please ensure Docker Desktop is started and finished initializing."
-        ok=false
-    fi
-
-    if [ "$ok" = true ]; then
-        print_success "All Docker components are verified and operational!"
+        print_warn "Hindi maka-connect sa Docker. Buksan muna ang Docker Desktop app."
+        return 1
     fi
 }
 
 test_docker() {
-    print_step "Step 7: Test Docker with 'hello-world'"
+    print_title "HAKBANG 7: PAGSUBOK GAMIT ANG 'hello-world' CONTAINER"
 
-    print_info "Running 'docker run hello-world'..."
+    print_info "Pinapatakbo ang: docker run hello-world..."
     if docker run --rm hello-world; then
         echo ""
-        print_success "Docker is working correctly!"
+        print_success "CONGRATULATIONS! Maayos na gumagana ang Docker sa iyong Windows PC! 🎉"
     else
         echo ""
-        print_error "Docker test failed. Ensure Docker Desktop is running with WSL 2 backend enabled."
-        exit 1
+        print_error "May problema sa pagpapatakbo. Siguraduhing bukas ang Docker Desktop at naka-enable ang WSL2."
     fi
 }
 
 # ------------------------------------------------------------------------------
-# 6. Interactive Menu
+# 6. INTERACTIVE MENU
 # ------------------------------------------------------------------------------
 show_menu() {
-    echo -e "${BLUE}==============================================${NC}"
-    echo -e "${GREEN}   Docker on Windows Setup & Verification     ${NC}"
-    echo -e "${BLUE}==============================================${NC}"
-    echo " 1) Check Windows Version & System Specs"
-    echo " 2) Setup & Update WSL2"
-    echo " 3) Install Docker Desktop (winget / web)"
-    echo " 4) View Recommended Docker Desktop Settings"
-    echo " 5) Verify Docker Installation"
-    echo " 6) Run Test Container (hello-world)"
-    echo " 7) Run All Steps In Sequence"
+    echo -e "${BLUE}======================================================${NC}"
+    echo -e "${GREEN}    GABAY SA PAG-INSTALL NG DOCKER SA WINDOWS         ${NC}"
+    echo -e "${BLUE}======================================================${NC}"
+    echo " 1) Hakbang 1: Check Windows Version & Virtualization"
+    echo " 2) Hakbang 2 & 3: Setup at Update ng WSL2"
+    echo " 3) Hakbang 4: I-install ang Docker Desktop (winget/web)"
+    echo " 4) Hakbang 5: Mga Setting sa Loob ng Docker Desktop"
+    echo " 5) Hakbang 6: I-verify ang Docker Installation"
+    echo " 6) Hakbang 7: Patakbuhin ang Test Container (hello-world)"
+    echo " 7) Sunod-sunod na patakbuhin lahat ng hakbang"
     echo " 0) Exit"
-    echo -e "${BLUE}==============================================${NC}"
-    read -rp "Select an option [0-7]: " choice
+    echo -e "${BLUE}======================================================${NC}"
+    read -rp "Pumili ng numero [0-7]: " choice
 
     case "$choice" in
-        1) check_windows_version ;;
+        1) check_windows ;;
         2) setup_wsl2 ;;
-        3) install_docker_desktop ;;
-        4) show_docker_config_guide ;;
-        5) verify_installation ;;
+        3) install_docker ;;
+        4) explain_settings ;;
+        5) verify_docker ;;
         6) test_docker ;;
         7)
-            check_windows_version
+            check_windows
             setup_wsl2
-            install_docker_desktop
-            show_docker_config_guide
-            verify_installation
+            install_docker
+            explain_settings
+            verify_docker
             test_docker
             ;;
         0) exit 0 ;;
-        *) print_error "Invalid selection.";;
+        *) print_error "Maling numero. Pumili mula 0 hanggang 7.";;
     esac
 }
 
 # ------------------------------------------------------------------------------
-# Main Entry Point
+# ENTRY POINT
 # ------------------------------------------------------------------------------
 case "$1" in
-    win|check-win) check_windows_version ;;
-    wsl)           setup_wsl2 ;;
-    install)       install_docker_desktop ;;
-    config)        show_docker_config_guide ;;
-    verify)        verify_installation ;;
-    test)          test_docker ;;
+    win)        check_windows ;;
+    wsl)        setup_wsl2 ;;
+    install)    install_docker ;;
+    config)     explain_settings ;;
+    verify)     verify_docker ;;
+    test)       test_docker ;;
     all)
-        check_windows_version
+        check_windows
         setup_wsl2
-        install_docker_desktop
-        show_docker_config_guide
-        verify_installation
+        install_docker
+        explain_settings
+        verify_docker
         test_docker
         ;;
     help|--help|-h)
-        echo "Usage: ./docker_installation_windows.sh [command]"
+        echo "Gamit: ./docker_installation_windows.sh [command]"
         echo ""
-        echo "Commands:"
-        echo "  win|check-win   Verify Windows version & specs"
-        echo "  wsl             Check and configure WSL2"
-        echo "  install         Install Docker Desktop (winget / web)"
-        echo "  config          Show recommended Docker Desktop settings"
-        echo "  verify          Verify docker, compose, and daemon status"
-        echo "  test            Run hello-world container test"
-        echo "  all             Execute complete setup and verification"
-        echo "  (no args)       Open interactive menu"
+        echo "Mga Command:"
+        echo "  win        Suriin ang Windows version at virtualization"
+        echo "  wsl        I-setup at i-update ang WSL2"
+        echo "  install    I-install ang Docker Desktop"
+        echo "  config     Tingnan ang dapat i-set sa Docker Desktop app"
+        echo "  verify     I-verify kung gumagana ang docker commands"
+        echo "  test       Patakbuhin ang hello-world test container"
+        echo "  all        Patakbuhin lahat ng hakbang nang sunod-sunod"
+        echo "  (walang arg) Bubuksan ang interactive Tagalog menu"
         ;;
     *)
         if [ -n "$1" ]; then
-            print_error "Unknown command: $1"
-            echo "Run './docker_installation_windows.sh help' for usage."
+            print_error "Hindi kilalang utos: $1"
+            echo "Patakbuhin ang './docker_installation_windows.sh help' para sa gabay."
             exit 1
         else
             show_menu
